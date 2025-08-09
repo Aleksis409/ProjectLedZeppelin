@@ -1,26 +1,21 @@
 package com.javarush.khmelov.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class User {
-
-    private Long id;
-
-    private String login;
-
+    private String username;
     private String password;
+    private int gamesPlayed = 0;
+    private int wins = 0;
+    private int losses = 0;
 
-    private Role role;
-
-    public String getImage() { //TODO move to DTO
-        return "image-" + id;
+    public User(String username, String password) {
+        this.username = username;
+        this.password = password;
     }
-
 }
