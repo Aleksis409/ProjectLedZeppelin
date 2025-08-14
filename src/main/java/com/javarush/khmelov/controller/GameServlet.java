@@ -102,7 +102,7 @@ public class GameServlet extends HttpServlet {
             return;
         }
 
-        gameService.processAction(state, action);
+        gameService.applyPlayerAction(state, action);
 
         if (state.isFinished()) {
             updateUserStats(session, state, req);

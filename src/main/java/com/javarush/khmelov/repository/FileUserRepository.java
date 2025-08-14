@@ -28,12 +28,12 @@ public class FileUserRepository implements UserRepository {
         try {
             if (Files.exists(filePath)) {
                 users = mapper.readValue(filePath.toFile(), new TypeReference<>() {});
-                log.info("Загружено {} пользователей из {}", users.size(), filePath);
+                log.info("Loaded {} users from {}", users.size(), filePath);
             } else {
-                log.warn("Файл {} не найден. Будет создан новый при сохранении.", filePath);
+                log.warn("File {} not found. It will be created when saving.", filePath);
             }
         } catch (IOException e) {
-            log.error("Ошибка при загрузке пользователей из файла {}", filePath, e);
+            log.error("Error while loading users from file {}", filePath, e);
             users = new HashMap<>();
         }
     }
@@ -42,9 +42,9 @@ public class FileUserRepository implements UserRepository {
         try {
             Files.createDirectories(filePath.getParent());
             mapper.writerWithDefaultPrettyPrinter().writeValue(filePath.toFile(), users);
-            log.debug("Сохранено {} пользователей в {}", users.size(), filePath);
+            log.debug("Saved {} users to {}", users.size(), filePath);
         } catch (IOException e) {
-            log.error("Ошибка при сохранении пользователей в файл {}", filePath, e);
+            log.error("Error while saving users to file {}", filePath, e);
         }
     }
 

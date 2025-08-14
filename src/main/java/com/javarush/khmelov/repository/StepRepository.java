@@ -23,9 +23,9 @@ public class StepRepository {
     public StepRepository() {
         try {
             loadStepsFromJson();
-            log.info("Загружены шаги: {}", stepMap.keySet());
+            log.info("Loaded steps: {}", stepMap.keySet());
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка загрузки " + STEPS_JSON, e);
+            throw new RuntimeException("Error loading " + STEPS_JSON, e);
         }
     }
 
@@ -34,7 +34,7 @@ public class StepRepository {
 
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(STEPS_JSON)) {
             if (is == null) {
-                throw new FileNotFoundException("Файл " + STEPS_JSON + " не найден");
+                throw new FileNotFoundException("File " + STEPS_JSON + " not found");
             }
 
             List<Step> steps = mapper.readValue(is, new TypeReference<>() {});
@@ -47,8 +47,8 @@ public class StepRepository {
     public Step getStep(int id) {
         Step step = stepMap.get(id);
         if (step == null) {
-            log.error("Шаг с id={} не найден!", id);
-            return new Step(id, "Шаг не найден");
+            log.error("Step with id={} not found!", id);
+            return new Step(id, "Step not found");
         }
         return step;
     }

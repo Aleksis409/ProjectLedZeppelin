@@ -22,7 +22,7 @@ public class GameService {
      * @param state     current game state
      * @param actionKey key of the selected action
      */
-    public void processAction(GameState state, String actionKey) {
+    public void applyPlayerAction(GameState state, String actionKey) {
         if (actionKey == null || actionKey.isEmpty()) {
             return;
         }

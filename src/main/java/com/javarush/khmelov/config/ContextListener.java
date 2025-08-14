@@ -14,8 +14,8 @@ import java.nio.file.Paths;
 public class ContextListener implements ServletContextListener {
 
     @Override
-    public void contextInitialized(ServletContextEvent sce) {
-        String dataDirPath = sce.getServletContext().getRealPath("/data");
+    public void contextInitialized(ServletContextEvent servletContextEvent) {
+        String dataDirPath = servletContextEvent.getServletContext().getRealPath("/data");
         if (dataDirPath == null) {
             throw new IllegalStateException("Cannot resolve real path for /data");
         }
@@ -27,7 +27,7 @@ public class ContextListener implements ServletContextListener {
             Path usersFile = dataDir.resolve("users.json");
 
             UserRepository userRepository = new FileUserRepository(usersFile);
-            sce.getServletContext().setAttribute("userRepository", userRepository);
+            servletContextEvent.getServletContext().setAttribute("userRepository", userRepository);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize user repository", e);
         }
