@@ -1,22 +1,30 @@
 package com.javarush.khmelov.entity;
 
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
+@Entity
+@Table(name = "step")
 public class Step {
-    private int id;
-    private String text;
-    private final Map<String, Integer> options = new LinkedHashMap<>();
-    private boolean finish = false;
-    private boolean win = false;
 
-    public Step(int id, String text) {
-        this.id = id;
-        this.text = text;
-    }
+    @Id
+    private Integer id;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String text;
+
+    @Column(nullable = false)
+    private Boolean finish = false;
+
+    @Column(nullable = false)
+    private Boolean win = false;
+
+    @OneToMany(mappedBy = "step", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<StepOption> options = new ArrayList<>();
 }

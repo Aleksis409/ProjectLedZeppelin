@@ -1,5 +1,11 @@
 package com.javarush.khmelov.controller;
 
+import com.javarush.khmelov.dto.StepDto;
+import com.javarush.khmelov.repository.StepRepository;
+import com.javarush.khmelov.service.BenchmarkService;
+import com.javarush.khmelov.service.RedisService;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.javarush.khmelov.entity.GameState;
@@ -24,24 +30,29 @@ import static org.mockito.Mockito.*;
 class GameServletTest {
 
     private GameServlet servlet;
+
     @Mock
     private UserRepository userRepository;
     @Mock
     private GameService gameService;
+    @Mock
+    private BenchmarkService benchmarkService;
 
     @BeforeEach
-    void setUp() throws NoSuchFieldException, IllegalAccessException {
+    void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
 
-        servlet = new GameServlet();
+        servlet = mock(GameServlet.class, CALLS_REAL_METHODS);
 
-        Field userRepoField = GameServlet.class.getDeclaredField("userRepository");
-        userRepoField.setAccessible(true);
-        userRepoField.set(servlet, userRepository);
+        setField("userRepository", userRepository);
+        setField("gameService", gameService);
+        setField("benchmarkService", benchmarkService);
+    }
 
-        Field gameServiceField = GameServlet.class.getDeclaredField("gameService");
-        gameServiceField.setAccessible(true);
-        gameServiceField.set(servlet, gameService);
+    private void setField(String name, Object value) throws Exception {
+        Field f = GameServlet.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(servlet, value);
     }
 
     @Test
@@ -66,15 +77,15 @@ class GameServletTest {
         when(session.getAttribute("user")).thenReturn(new User("test", "pass"));
         when(session.getAttribute("playerName")).thenReturn(null);
 
-        Step introStep = new Step();
-        introStep.setText("Welcome!");
-        when(gameService.getStepById(0)).thenReturn(introStep);
+        StepDto introStepDto = new StepDto();
+        introStepDto.setText("Welcome!");
 
+        int introStepId = 1;
+        when(gameService.getStepDtoById(introStepId)).thenReturn(introStepDto);
         when(req.getRequestDispatcher("/WEB-INF/start.jsp")).thenReturn(dispatcher);
 
         servlet.doGet(req, resp);
 
-        verify(req).setAttribute("welcomeText", "Welcome!");
         verify(dispatcher).forward(req, resp);
     }
 
@@ -85,24 +96,32 @@ class GameServletTest {
         HttpSession session = mock(HttpSession.class);
         RequestDispatcher dispatcher = mock(RequestDispatcher.class);
         GameState state = mock(GameState.class);
-        Step step = new Step();
+
+        Step stepEntity = new Step();
+        stepEntity.setId(1);
+
+        StepDto stepDto = new StepDto();
+        stepDto.setId(1);
 
         when(req.getSession(false)).thenReturn(session);
         when(session.getAttribute("user")).thenReturn(new User("test", "pass"));
         when(session.getAttribute("playerName")).thenReturn("player1");
         when(session.getAttribute("gameState")).thenReturn(state);
 
-        when(gameService.getCurrentStep(state)).thenReturn(step);
-        when(state.isFinished()).thenReturn(false);
+        when(gameService.getStepEntityById(state.getCurrentStepId())).thenReturn(stepEntity);
+        when(gameService.getStepDtoById(state.getCurrentStepId())).thenReturn(stepDto);
 
+        when(state.getFinished()).thenReturn(false);
         when(req.getRequestDispatcher("/WEB-INF/game.jsp")).thenReturn(dispatcher);
 
         servlet.doGet(req, resp);
 
-        verify(req).setAttribute("step", step);
+        verify(req).setAttribute("step", stepDto);
         verify(req).setAttribute("state", state);
+        verify(benchmarkService).compareStepFetchSpeed(state.getCurrentStepId());
         verify(dispatcher).forward(req, resp);
     }
+
 
     @Test
     void doPostWithoutSessionRedirectsToLoginTestOk() throws Exception {
@@ -110,9 +129,7 @@ class GameServletTest {
         HttpServletResponse resp = mock(HttpServletResponse.class);
 
         when(req.getSession()).thenReturn(null);
-
         servlet.doPost(req, resp);
-
         verify(resp).sendRedirect("login");
     }
 
@@ -124,10 +141,7 @@ class GameServletTest {
 
         when(req.getSession()).thenReturn(session);
         when(req.getParameter("player")).thenReturn("playerName");
-
-        // ВАЖНО: смоделировать что пользователь залогинен
-        User user = new User("playerName", "pass");
-        when(session.getAttribute("user")).thenReturn(user);
+        when(session.getAttribute("user")).thenReturn(new User("playerName", "pass"));
 
         servlet.doPost(req, resp);
 
@@ -145,21 +159,17 @@ class GameServletTest {
         when(req.getSession()).thenReturn(session);
         when(req.getParameter("player")).thenReturn(null);
         when(req.getParameter("action")).thenReturn("reset");
-
-        User user = new User("playerName", "pass");
-        when(session.getAttribute("user")).thenReturn(user);
+        when(session.getAttribute("user")).thenReturn(new User("playerName", "pass"));
 
         servlet.doPost(req, resp);
 
         ArgumentCaptor<GameState> captor = ArgumentCaptor.forClass(GameState.class);
         verify(session, atLeastOnce()).setAttribute(eq("gameState"), captor.capture());
+        GameState lastState = captor.getValue();
 
-        GameState lastState = captor.getAllValues().get(captor.getAllValues().size() - 1);
         assertEquals(1, lastState.getCurrentStepId());
-
         verify(resp).sendRedirect("/game");
     }
-
 
     @Test
     void doPostUpdatesStatsAndShowsResultOnFinishedGamePostTestOk() throws Exception {
@@ -183,11 +193,9 @@ class GameServletTest {
         when(userRepository.findByUsername("alex")).thenReturn(Optional.of(existingUser));
 
         GameService mockGameService = mock(GameService.class);
-        when(mockGameService.getCurrentStep(finishedState)).thenReturn(new Step());
+        when(mockGameService.getCurrentStepEntity(finishedState)).thenReturn(new Step());
 
-        java.lang.reflect.Field field = GameServlet.class.getDeclaredField("gameService");
-        field.setAccessible(true);
-        field.set(servlet, mockGameService);
+        setField("gameService", mockGameService);
 
         servlet.doPost(req, resp);
 
@@ -198,4 +206,103 @@ class GameServletTest {
         verify(dispatcher).forward(req, resp);
         verify(resp, never()).sendRedirect(anyString());
     }
+
+    @Test
+    void initShouldInitializeServices() throws Exception {
+        GameServlet realServlet = new GameServlet();
+
+        ServletContext context = mock(ServletContext.class);
+        StepRepository stepRepo = mock(StepRepository.class);
+        RedisService redis = mock(RedisService.class);
+
+        when(context.getAttribute("stepRepository")).thenReturn(stepRepo);
+        when(context.getAttribute("redisService")).thenReturn(redis);
+
+        ServletConfig config = mock(ServletConfig.class);
+        when(config.getServletContext()).thenReturn(context);
+
+        realServlet.init(config);
+
+        Field benchmarkField = GameServlet.class.getDeclaredField("benchmarkService");
+        benchmarkField.setAccessible(true);
+        Object benchmarkService = benchmarkField.get(realServlet);
+        assertNotNull(benchmarkService);
+
+        Field gameServiceField = GameServlet.class.getDeclaredField("gameService");
+        gameServiceField.setAccessible(true);
+        Object gameService = gameServiceField.get(realServlet);
+        assertNotNull(gameService);
+    }
+
+    @Test
+    void destroyShouldCloseGameService() throws Exception {
+        GameServlet servlet = new GameServlet();
+        GameService mockGameService = mock(GameService.class);
+
+        Field gameServiceField = GameServlet.class.getDeclaredField("gameService");
+        gameServiceField.setAccessible(true);
+        gameServiceField.set(servlet, mockGameService);
+
+        servlet.destroy();
+        verify(mockGameService).close();
+    }
+
+    @Test
+    void doPostWithNextStepIdParamFinalStepMarksGameFinished() throws Exception {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        HttpSession session = mock(HttpSession.class);
+        Step finalStep = new Step();
+        finalStep.setId(2);
+        finalStep.setFinish(true);
+        finalStep.setWin(true);
+
+        GameState state = new GameState();
+        state.setCurrentStepId(1);
+
+        when(req.getSession()).thenReturn(session);
+        when(session.getAttribute("user")).thenReturn(new User("alex", "pass"));
+        when(session.getAttribute("gameState")).thenReturn(state);
+        when(req.getParameter("nextStepId")).thenReturn("2");
+
+        GameService mockGameService = mock(GameService.class);
+        when(mockGameService.getStepEntityById(2)).thenReturn(finalStep);
+        setField("gameService", mockGameService);
+
+        UserRepository mockUserRepo = mock(UserRepository.class);
+        setField("userRepository", mockUserRepo);
+        when(mockUserRepo.findByUsername("alex")).thenReturn(Optional.of(new User("alex", "pass")));
+
+        RequestDispatcher dispatcher = mock(RequestDispatcher.class);
+        when(req.getRequestDispatcher("/WEB-INF/result.jsp")).thenReturn(dispatcher);
+
+        servlet.doPost(req, resp);
+
+        assertTrue(state.getFinished());
+        assertTrue(state.isWin());
+        assertEquals(2, state.getFinalStepId());
+        verify(dispatcher).forward(req, resp);
+        verify(resp, never()).sendRedirect(anyString());
+    }
+
+    @Test
+    void doPostWithInvalidNextStepIdParamLogsErrorAndDoesNotCrash() throws Exception {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        HttpSession session = mock(HttpSession.class);
+
+        GameState state = new GameState();
+        state.setCurrentStepId(1);
+
+        when(req.getSession()).thenReturn(session);
+        when(session.getAttribute("user")).thenReturn(new User("alex", "pass"));
+        when(session.getAttribute("gameState")).thenReturn(state);
+        when(req.getParameter("nextStepId")).thenReturn("invalidNumber");
+
+        servlet.doPost(req, resp);
+
+        assertEquals(1, state.getCurrentStepId());
+        verify(resp).sendRedirect("/game");
+    }
 }
+

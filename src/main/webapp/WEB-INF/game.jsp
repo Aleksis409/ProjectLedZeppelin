@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%
     request.setAttribute("pageTitle", "Приключение");
 %>
@@ -16,11 +17,17 @@
         ${step.text}
     </div>
 
+    <c:if test="${not empty benchmarkResult}">
+        <div class="benchmark" style="margin-top: 10px; font-size: 0.9rem; color: #888;">
+            ⚡ Время выборки: ${benchmarkResult}
+        </div>
+    </c:if>
+
     <form method="post" action="game">
         <div class="buttons-container">
-            <c:forEach var="entry" items="${step.options}">
-                <button type="submit" name="action" value="${entry.key}" class="btn btn-restart">
-                        ${entry.key}
+            <c:forEach var="option" items="${step.options}">
+                <button type="submit" name="nextStepId" value="${option.nextStepId}" class="btn btn-restart">
+                        ${option.optionText}
                 </button>
             </c:forEach>
         </div>

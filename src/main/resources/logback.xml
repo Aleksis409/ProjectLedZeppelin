@@ -8,9 +8,7 @@
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/app.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- Ротация каждый день -->
             <fileNamePattern>logs/app-%d{yyyy-MM-dd}.log</fileNamePattern>
-            <!-- Храним логи 7 дней -->
             <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder>
@@ -19,7 +17,12 @@
         </encoder>
     </appender>
 
-    <root level="debug">
+    <logger name="org.hibernate" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+
+    <logger name="com.javarush.khmelov" level="DEBUG"/>
+
+    <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>

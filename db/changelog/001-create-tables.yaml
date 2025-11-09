@@ -1,0 +1,250 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-schema
+      author: Alexey A
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS quest1
+
+  - changeSet:
+      id: create-app_user
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: app_user
+                schemaName: quest1
+      changes:
+        - createTable:
+            tableName: app_user
+            schemaName: quest1
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: username
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: games_played
+                  type: INT
+                  defaultValueNumeric: "0"
+              - column:
+                  name: wins
+                  type: INT
+                  defaultValueNumeric: "0"
+              - column:
+                  name: losses
+                  type: INT
+                  defaultValueNumeric: "0"
+
+  - changeSet:
+      id: create-step
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: step
+                schemaName: quest1
+      changes:
+        - createTable:
+            tableName: step
+            schemaName: quest1
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: false
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: text
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: finish
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: win
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+
+  - changeSet:
+      id: create-step_option
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: step_option
+                schemaName: quest1
+      changes:
+        - createTable:
+            tableName: step_option
+            schemaName: quest1
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: step_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: option_text
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_step_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: create-game_state
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: game_state
+                schemaName: quest1
+      changes:
+        - createTable:
+            tableName: game_state
+            schemaName: quest1
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: current_step_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: final_step_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: finished
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: win
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+
+  - changeSet:
+      id: add-foreign-key-step_option-step
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_step_option_step
+                foreignKeyTableName: step_option
+                foreignKeySchemaName: quest1
+      changes:
+        - addForeignKeyConstraint:
+            baseTableSchemaName: quest1
+            baseTableName: step_option
+            baseColumnNames: step_id
+            referencedTableSchemaName: quest1
+            referencedTableName: step
+            referencedColumnNames: id
+            constraintName: fk_step_option_step
+
+  - changeSet:
+      id: add-foreign-key-step_option-next-step
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_step_option_next_step
+                foreignKeyTableName: step_option
+                foreignKeySchemaName: quest1
+      changes:
+        - addForeignKeyConstraint:
+            baseTableSchemaName: quest1
+            baseTableName: step_option
+            baseColumnNames: next_step_id
+            referencedTableSchemaName: quest1
+            referencedTableName: step
+            referencedColumnNames: id
+            constraintName: fk_step_option_next_step
+
+  - changeSet:
+      id: add-foreign-key-game_state-user
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_game_state_user
+                foreignKeyTableName: game_state
+                foreignKeySchemaName: quest1
+      changes:
+        - addForeignKeyConstraint:
+            baseTableSchemaName: quest1
+            baseTableName: game_state
+            baseColumnNames: user_id
+            referencedTableSchemaName: quest1
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_game_state_user
+
+  - changeSet:
+      id: add-foreign-key-game_state-step
+      author: Alexey A
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_game_state_step
+                foreignKeyTableName: game_state
+                foreignKeySchemaName: quest1
+      changes:
+        - addForeignKeyConstraint:
+            baseTableSchemaName: quest1
+            baseTableName: game_state
+            baseColumnNames: current_step_id
+            referencedTableSchemaName: quest1
+            referencedTableName: step
+            referencedColumnNames: id
+            constraintName: fk_game_state_step

@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: quest-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-quest}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - quest-net
+    ports:
+      - "${DB_PORT:-5432}:${DB_PORT:-5432}"
+
+  redis:
+    image: redis:7
+    container_name: quest-redis
+    ports:
+      - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
+    volumes:
+      - redisdata:/data
+    networks:
+      - quest-net
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "${REDIS_INSIGHT_PORT:-8001}:5540"
+    volumes:
+      - redisinsight-data:/db
+    networks:
+      - quest-net
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  redisinsight-data:
+
+networks:
+  quest-net:
+    driver: bridge
